@@ -1,5 +1,7 @@
 . scripts/common.sh
 
+VERSION=$(grep 'RX_VERSION' Version.xcconfig | cut -d'=' -f2 | tr -d ' ')
+
 function updateDocs() {
   WORKSPACE=$1
   SCHEME=$2
@@ -7,13 +9,12 @@ function updateDocs() {
   SIMULATOR=$4
   MODULE=$5
 
-  # ensure_simulator_available "${SIMULATOR}"
-  SIMULATOR_GUID="B09F4619-9A1A-4B4A-A1EC-6DBD9AC97A9B"
+  SIMULATOR_GUID=$(xcrun simctl list devices available | grep "$SIMULATOR" | head -1 | grep -oE '[A-F0-9-]{36}')
   DESTINATION='id='$SIMULATOR_GUID''
 
   set -x
   killall Simulator || true
-  jazzy --config .jazzy.yml --theme fullwidth --github_url https://github.com/ReactiveX/RxSwift -m "${MODULE}" -x -workspace,"${WORKSPACE}",-scheme,"${SCHEME}",-configuration,"${CONFIGURATION}",-derivedDataPath,"${BUILD_DIRECTORY}",-destination,"$DESTINATION",CODE_SIGN_IDENTITY=,CODE_SIGNING_REQUIRED=NO,CODE_SIGNING_ALLOWED=NO
+  jazzy --config .jazzy.yml --module-version "${VERSION}" --theme fullwidth --github_url https://github.com/ReactiveX/RxSwift -m "${MODULE}" -x -workspace,"${WORKSPACE}",-scheme,"${SCHEME}",-configuration,"${CONFIGURATION}",-derivedDataPath,"${BUILD_DIRECTORY}",-destination,"$DESTINATION",CODE_SIGN_IDENTITY=,CODE_SIGNING_REQUIRED=NO,CODE_SIGNING_ALLOWED=NO
   set +x
 }
 

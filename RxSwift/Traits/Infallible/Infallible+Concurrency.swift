@@ -6,7 +6,7 @@
 //  Copyright © 2021 Krunoslav Zaher. All rights reserved.
 //
 
-#if swift(>=5.6) && canImport(_Concurrency) && !os(Linux)
+#if swift(>=5.7)
 
 // MARK: - Infallible
 
@@ -26,7 +26,7 @@ public extension InfallibleType {
         AsyncStream<Element> { continuation in
             let disposable = subscribe(
                 onNext: { value in continuation.yield(value) },
-                onCompleted: { continuation.finish() },
+                onCompleted: { continuation.finish() }
             )
             continuation.onTermination = { @Sendable termination in
                 if termination == .cancelled {

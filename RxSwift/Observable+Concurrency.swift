@@ -6,7 +6,7 @@
 //  Copyright © 2021 Krunoslav Zaher. All rights reserved.
 //
 
-#if swift(>=5.6) && canImport(_Concurrency)
+#if swift(>=5.7)
 import Foundation
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
@@ -41,7 +41,7 @@ public extension ObservableConvertibleType {
                 onDisposed: {
                     guard !isFinished else { return }
                     continuation.finish(throwing: CancellationError())
-                },
+                }
             )
             continuation.onTermination = { @Sendable termination in
                 if case .cancelled = termination {
@@ -54,13 +54,17 @@ public extension ObservableConvertibleType {
 
 @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public extension AsyncSequence {
-    /// Convert an `AsyncSequence` to an `Observable` emitting
-    /// values of the asynchronous sequence's type
+    /// Convert an `AsyncSequence` to an `Observable`.
     ///
-    /// - returns: An `Observable` of the async sequence's type
-    func asObservable() -> Observable<Element> {
+    /// Iteration runs in a detached task to prevent blocking the calling thread.
+    /// Use `.observe(on:)` to control event delivery (e.g., `MainScheduler.instance` for UI updates).
+    ///
+    /// - parameter priority: Priority for the detached task
+    ///
+    /// - returns: An `Observable` of the async sequence's element type
+    func asObservable(priority: TaskPriority? = nil) -> Observable<Element> {
         Observable.create { observer in
-            let task = Task {
+            let task = Task.detached(priority: priority) {
                 do {
                     for try await value in self {
                         observer.onNext(value)

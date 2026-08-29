@@ -168,7 +168,7 @@ private final class ShareReplay1WhileConnectedConnection<Element>:
     private let lock: RecursiveLock
     private var disposed: Bool = false
     fileprivate var observers = Observers()
-    private var element: Element?
+    fileprivate var element: Element?
 
     init(parent: Parent, lock: RecursiveLock) {
         self.parent = parent
@@ -202,18 +202,6 @@ private final class ShareReplay1WhileConnectedConnection<Element>:
 
     final func connect() {
         subscription.setDisposable(parent.source.subscribe(self))
-    }
-
-    final func synchronized_subscribe<Observer: ObserverType>(_ observer: Observer) -> Disposable where Observer.Element == Element {
-        lock.performLocked {
-            if let element = self.element {
-                observer.on(.next(element))
-            }
-
-            let disposeKey = self.observers.insert(observer.on)
-
-            return SubscriptionDisposable(owner: self, key: disposeKey)
-        }
     }
 
     private final func synchronized_dispose() {
@@ -273,14 +261,20 @@ private final class ShareReplay1WhileConnected<Element>:
         let connection = synchronized_subscribe(observer)
         let count = connection.observers.count
 
-        let disposable = connection.synchronized_subscribe(observer)
+        let disposeKey = connection.observers.insert(observer.on)
+
+        let initialValueToReplay = connection.element
         lock.unlock()
+
+        if let initialValueToReplay {
+            observer.on(.next(initialValueToReplay))
+        }
 
         if count == 0 {
             connection.connect()
         }
 
-        return disposable
+        return SubscriptionDisposable(owner: connection, key: disposeKey)
     }
 
     @inline(__always)
@@ -292,7 +286,7 @@ private final class ShareReplay1WhileConnected<Element>:
         } else {
             connection = ShareReplay1WhileConnectedConnection<Element>(
                 parent: self,
-                lock: lock,
+                lock: lock
             )
             self.connection = connection
         }
@@ -433,7 +427,7 @@ private final class ShareWhileConnected<Element>:
         } else {
             connection = ShareWhileConnectedConnection<Element>(
                 parent: self,
-                lock: lock,
+                lock: lock
             )
             self.connection = connection
         }
